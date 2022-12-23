@@ -4,8 +4,14 @@ from rest_framework.response import Response
 
 from rest_framework import status
 from profiles_api import serializers
+from profiles_api import models
+from rest_framework import filters
+from rest_framework.authentication import TokenAuthentication
+from profiles_api import permission
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.settings import api_settings
 
-
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 class HelloView(APIView):
     """test api views"""
@@ -81,3 +87,30 @@ class HelloViewSet(viewsets.ViewSet):
     def destroy(self,request):
         """update"""
         return Response({'message':"delete"})    
+        
+        
+class UserProfileViewSet(viewsets.ModelViewSet):
+    """viewset"""
+    
+    serializer_class = serializers.UserProfileSerializer
+    queryset = models.UserProfile.objects.all()
+    authentication_classes=(TokenAuthentication,)
+    permission_classes=(permission.userOwnPermission,)
+    filter_backends=(filters.SearchFilter,)
+    search_fields=('name', 'email')
+    
+class UserLoginApiView(ObtainAuthToken):
+    """hancle create auth user profile view"""
+    renderer_classes=api_settings.DEFAULT_RENDERER_CLASSES
+    
+    
+    
+class UserProfileFeedViewSet(viewsets.ModelViewSet):    
+    """viewset creating feed"""
+    authentication_classes=(TokenAuthentication,)
+    serializer_class=serializers.ProfileFeedSerializer
+    queryset = models.ProfileFeedModel.objects.all()
+    permission_classes=(permission.updateOwnStatus,IsAuthenticatedOrReadOnly)
+    def perform_create(self, serializer):
+        """set the user profile feed"""
+        serializer.save(user_profile=self.request.user)
